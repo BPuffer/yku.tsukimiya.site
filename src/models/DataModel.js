@@ -1,15 +1,10 @@
 import encryptPassword from '@/module/encrypt.js';
-const PROXY_URL = "localhost:5000";
-
-const DEFAULT_RAWDATA = JSON.stringify({
-  currentLoginUser: null,
-  allLoginUsers: {},
-  server: {}
-});
+const PROXY_URL = import.meta.env.VITE_PROXY_URL || "localhost:5000";
+const USE_HTTPS = import.meta.env.VITE_PROXY_HTTPS === "true" || false;
 
 function proxyTo(url) {
   if (!url) return '';
-  let protocol = 'http://';
+  let protocol = USE_HTTPS ? 'https://' : 'http://';
   let rest = url;
 
   if (url.startsWith('http://')) {
@@ -23,6 +18,12 @@ function proxyTo(url) {
 
   return `${protocol}${PROXY_URL}/${rest}`;
 }
+
+const DEFAULT_RAWDATA = JSON.stringify({
+  currentLoginUser: null,
+  allLoginUsers: {},
+  server: {}
+});
 
 class JWXT {
   constructor(username, password) {
