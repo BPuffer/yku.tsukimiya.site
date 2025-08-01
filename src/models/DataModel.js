@@ -1,5 +1,5 @@
 import encryptPassword from '@/module/encrypt.js';
-const PROXY_URL = import.meta.env.VITE_PROXY_URL || "localhost:5000";
+const PROXY_URL = import.meta.env.VITE_PROXY_DOMAIN || "localhost:5000";
 const USE_HTTPS = import.meta.env.VITE_PROXY_HTTPS === "true" || false;
 
 function proxyTo(url) {
