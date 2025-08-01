@@ -19,12 +19,6 @@ if [ "$#" -ne 1 ]; then
     show_help
 fi
 
-# 验证IP地址格式
-if ! [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "错误: 提供的参数 '$1' 不是有效的IP地址"
-    show_help
-fi
-
 SERVER_IP=$1
 PROJECT_ROOT="/project-tsukimiya"
 FRONTEND_DIR="$PROJECT_ROOT/tsukimiya-site"
@@ -54,7 +48,7 @@ fi
 # 创建前端环境配置文件
 echo "创建前端环境配置..."
 cat > $FRONTEND_DIR/.env.production <<EOF
-VITE_PROXY_URL=$SERVER_IP:5000
+VITE_PROXY_URL=http://$SERVER_IP:5000
 VITE_PROXY_HTTPS=false
 EOF
 
@@ -73,7 +67,7 @@ module.exports = {
   apps: [{
     name: 'tsukimiya-site',
     script: 'node_modules/vite/bin/vite.js',
-    args: 'preview --port 4000',
+    args: 'preview --port 4000 --host 0.0.0.0',
     cwd: '$FRONTEND_DIR',
     autorestart: true,
     watch: false,
@@ -87,7 +81,7 @@ EOF
 # 启动/重启前端服务
 echo "启动前端服务..."
 if pm2 list | grep -q tsukimiya-site; then
-  pm2 reload ecosystem.config.js
+  pm2 reload tsukimiya-site
 else
   pm2 start ecosystem.config.js
 fi
@@ -114,13 +108,14 @@ fi
 echo "安装Python依赖..."
 source $BACKEND_DIR/venv/bin/activate
 pip install -U pip
-pip install -r $BACKEND_DIR/requirement.txt
+pip install -r $BACKEND_DIR/requirements.txt  # 修正为requirements.txt
 deactivate
 
 # 创建后端环境配置文件
 echo "创建后端环境配置..."
 cat > $BACKEND_DIR/.env <<EOF
-PROXY_URL=http://$SERVER_IP:5000
+PROXY_HOST=0.0.0.0
+PROXY_PORT=5000
 FRONTEND_ORIGIN=http://$SERVER_IP:4000
 SSL_VERIFY=false
 EOF
@@ -136,6 +131,7 @@ After=network.target
 User=root
 WorkingDirectory=$BACKEND_DIR
 Environment="PATH=$BACKEND_DIR/venv/bin"
+EnvironmentFile=$BACKEND_DIR/.env  # 添加环境变量文件
 ExecStart=$BACKEND_DIR/venv/bin/gunicorn \\
           --workers 3 \\
           --bind 0.0.0.0:5000 \\
@@ -156,6 +152,12 @@ if systemctl is-active --quiet tsukimiya-proxy.service; then
 else
   systemctl start tsukimiya-proxy.service
 fi
+
+# 配置防火墙
+echo "配置防火墙..."
+ufw allow 4000
+ufw allow 5000
+ufw reload
 
 echo "========================================"
 echo "部署完成!"
