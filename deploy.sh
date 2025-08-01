@@ -86,9 +86,16 @@ else
   pm2 start ecosystem.config.js
 fi
 
-# 保存PM2配置
+
 pm2 save
-pm2 startup 2>&1 | grep -v PM2 | bash
+echo "设置PM2开机启动..."
+STARTUP_CMD=$(pm2 startup | grep -o "sudo.*")
+if [ -n "$STARTUP_CMD" ]; then
+  echo "执行: $STARTUP_CMD"
+  eval "$STARTUP_CMD"
+else
+  echo "警告: 未能获取PM2启动命令，请手动执行 'pm2 startup'"
+fi
 
 # 部署后端部分
 echo "部署后端服务..."
@@ -131,7 +138,7 @@ After=network.target
 User=root
 WorkingDirectory=$BACKEND_DIR
 Environment="PATH=$BACKEND_DIR/venv/bin"
-EnvironmentFile=$BACKEND_DIR/.env  # 添加环境变量文件
+EnvironmentFile=$BACKEND_DIR/.env
 ExecStart=$BACKEND_DIR/venv/bin/gunicorn \\
           --workers 3 \\
           --bind 0.0.0.0:5000 \\
