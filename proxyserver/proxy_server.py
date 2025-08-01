@@ -1,19 +1,19 @@
+import os
 from flask import Flask, request, Response, make_response
 import requests
 from urllib.parse import urlparse, urljoin
 import urllib3
 urllib3.disable_warnings()
 import re
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 
 # 配置
-proxy_host = 'localhost'
-proxy_port = 5000
-PROXY_URL = f'http://localhost:5000'  # 代理域名
-FRONTEND_ORIGIN = "http://localhost:4000"  # 跨域允许目标域名
-
-ssl_verify = False
+PROXY_URL = os.getenv('PROXY_URL', 'http://localhost:5000')  # 代理域名
+FRONTEND_ORIGIN = os.getenv('FRONTEND_ORIGIN', 'http://localhost:4000')  # 跨域允许目标域名
+ssl_verify = os.getenv('SSL_VERIFY', 'False').lower() == 'true'
 
 def proxy_to(url):
     """
@@ -141,7 +141,8 @@ def proxy(path):
     return response
 
 if __name__ == '__main__':
-    app.run(host=proxy_host, port=proxy_port, debug=False)
+    host, port = PROXY_URL.split(':')
+    app.run(host=host, port=int(port), debug=False)
 
 if __name__ == '__main__2':
     print(proxy_to('http://jwgl.yku.edu.cn/sso.jsp?ticket=ST-3509-Eqor2q3ApswJA8SIMRYw-7Q4huolocalhost'))
