@@ -85,17 +85,7 @@ if pm2 list | grep -q tsukimiya-site; then
 else
   pm2 start ecosystem.config.js
 fi
-
-
 pm2 save
-echo "设置PM2开机启动..."
-STARTUP_CMD=$(pm2 startup | grep -o "sudo.*")
-if [ -n "$STARTUP_CMD" ]; then
-  echo "执行: $STARTUP_CMD"
-  eval "$STARTUP_CMD"
-else
-  echo "警告: 未能获取PM2启动命令，请手动执行 'pm2 startup'"
-fi
 
 # 部署后端部分
 echo "部署后端服务..."
@@ -171,4 +161,7 @@ echo "部署完成!"
 echo "前端服务: PM2管理 (端口 4000)"
 echo "后端服务: systemd管理 (端口 5000)"
 echo "访问地址: http://$SERVER_IP:4000"
+echo "========================================"
+echo "如果PM2开机启动未设置成功，请执行:"
+echo "   pm2 startup"
 echo "========================================"
