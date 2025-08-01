@@ -108,7 +108,7 @@ fi
 echo "安装Python依赖..."
 source $BACKEND_DIR/venv/bin/activate
 pip install -U pip
-pip install -r $BACKEND_DIR/requirements.txt  # 修正为requirements.txt
+pip install -r $BACKEND_DIR/requirements.txt
 deactivate
 
 # 创建后端环境配置文件
