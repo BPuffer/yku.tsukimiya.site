@@ -143,7 +143,10 @@ def proxy(path):
 if __name__ == '__main__':
     try:
         host, port = PROXY_URL.split("://")[1].split(':')
-        app.run(host=host, port=int(port), debug=False)
+        app.run(host='0.0.0.0', port=int(port), debug=False)  # 我为什么会在这个地方摔倒四次
+        # host应该总是监听本地
+        # port则应该是从环境变量中获取的
+        # 我去我是猪鼻
     except:
         pass
 
