@@ -180,7 +180,7 @@ EOF
 # 配置systemd服务
 echo "配置systemd服务..."
 GUNICORN_CMD="$BACKEND_DIR/venv/bin/gunicorn"
-GUNICORN_ARGS="--workers 3 --bind 0.0.0.0:$BACKEND_PORT main:app"
+GUNICORN_ARGS="--workers 3 --bind 0.0.0.0:$BACKEND_PORT proxy_server:app"
 
 # 添加HTTPS参数
 if [ "$USE_HTTPS" = true ]; then
