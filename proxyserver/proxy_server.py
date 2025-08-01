@@ -141,8 +141,11 @@ def proxy(path):
     return response
 
 if __name__ == '__main__':
-    host, port = PROXY_URL.split(':')
-    app.run(host=host, port=int(port), debug=False)
+    try:
+        host, port = PROXY_URL.split("://")[1].split(':')
+        app.run(host=host, port=int(port), debug=False)
+    except:
+        pass
 
 if __name__ == '__main__2':
     print(proxy_to('http://jwgl.yku.edu.cn/sso.jsp?ticket=ST-3509-Eqor2q3ApswJA8SIMRYw-7Q4huolocalhost'))
