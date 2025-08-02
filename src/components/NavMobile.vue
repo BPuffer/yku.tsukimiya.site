@@ -5,7 +5,7 @@
         v-for="item in navItemsMobile" 
         :key="item.id" 
         class="nav-item"
-        :class="{ 'active': currentRoute === item.route }"
+        :class="{ 'active': currentRoute === item.route.name }"
         @click="navigateTo(item.route)"
       >
         <img 
@@ -60,9 +60,6 @@ const iconMap = {
 const router = useRouter();
 const route = useRoute();
 const currentRoute = computed(() => route.name);
-const isActive = computed(() => {
-  return currentRoute.value === item.route;
-});
 
 const getIconUrl = (item) => {
   const isActive = currentRoute.value === item.route.name;
@@ -112,6 +109,10 @@ const navigateTo = (route) => {
 /* 激活状态的导航项 */
 .nav-item.active {
   color: #3B82F6;
+}
+
+.nav-item.active .nav-icon {
+  color: #f00
 }
 
 /* 导航图标 */

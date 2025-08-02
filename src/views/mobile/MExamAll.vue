@@ -26,8 +26,6 @@
         <span>{{ exam.总学时 }}学时</span>
       </div>
     </div>
-
-    <div class="sentinel"></div>
   </div>
 
   <!-- 抽屉组件 -->
@@ -589,9 +587,5 @@ onMounted(() => {
 /* #endregion */
 
 /* #endregion */
-
-.sentinel {
-  height: 136px;
-}
 
 </style>

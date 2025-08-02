@@ -25,6 +25,19 @@ const DEFAULT_RAWDATA = JSON.stringify({
   server: {}
 });
 
+const ERROR_MSGS = {
+  "CORS": "请检查是否在正确的域名下运行。不要使用ip直接访问。",
+  429: '请求过于频繁，请稍后再试',
+  502: '服务器掉线。\n这通常不是你的问题。你可以尝试联系网站管理员。\n(vx:mcpuffer)',
+}
+
+function rethrow(err) {
+  if (err.message.includes("Failed to fetch")) {
+    return new Error(`不预期的无法连接错误。\n可能是后端代理服务器未启用`);
+  }
+  return new Error(`不预期的错误：${err.message}。\n请将此界面截图及最近操作回报给开发者。\n(vx:mcpuffer)`);
+}
+
 class JWXT {
   constructor(username, password) {
     this.JWGL_URL = "https://jwgl.yku.edu.cn";
@@ -42,13 +55,18 @@ class JWXT {
 
   // 登录
   async login() {
-    console.debug(`教务系统实例尝试登录: ${this.username}, ${this.password}`);
+    console.debug(`教务系统实例尝试开始登录: ${this.username}`);
     try {
       // 步骤1: 获取初始Cookie
       console.debug(`- 获取初始Cookie: ${this.JWGL_URL}`);
       const jwxtInitPromise = fetch(proxyTo(this.JWGL_URL), {
         credentials: 'include',
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(err => { throw rethrow(err) });
 
       // 步骤2: 获取登录页面和salt
       console.debug(`- 获取登录页面和salt: ${this.AUTH_URL}/authserver/login`);
@@ -56,6 +74,14 @@ class JWXT {
       const loginUrl = `${this.AUTH_URL}/authserver/login?${loginParams}`;
       const loginResponse = await fetch(proxyTo(loginUrl), {
         credentials: 'include'
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(err => { 
+        console.error("正在重写并抛出这个错误：", err);
+        throw rethrow(err)
       });
 
       if (loginResponse.url.includes('xsMain.jsp')) {
@@ -111,7 +137,12 @@ class JWXT {
         body: formData,
         credentials: 'include'
         // redirect: 'manual'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       // 步骤6: 验证登录结果
       console.debug(`- 验证登录结果: ${loginResult.url}`);
@@ -126,12 +157,15 @@ class JWXT {
         }
         throw new Error(`登录失败。URL: ${loginResult.url}`);
       }
-    } catch (error) {
-      console.error("登录过程中出错:", error);
-      throw error;
+    } catch (err) {
+      const newerr = rethrow(err);
+      throw newerr;
     }
   }
 
+  /**
+   * @deprecated 登录速度问题已经改善，登录轮询器未更新
+   */
   async *loginTaskGenerator() {
     const self = this;
     console.debug(`教务系统实例尝试登录: ${self.username}, ${self.password}`);
@@ -143,7 +177,12 @@ class JWXT {
       console.debug(`- 获取初始Cookie: ${self.JWGL_URL}`);
       const jwxtInitPromise = fetch(proxyTo(self.JWGL_URL), {
         credentials: 'include',
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       // 步骤2: 获取登录页面和salt
       yield { type: "progress", message: "获取登录页面..." };
@@ -152,7 +191,12 @@ class JWXT {
       const loginUrl = `${self.AUTH_URL}/authserver/login?${loginParams}`;
       const loginResponse = await fetch(proxyTo(loginUrl), {
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       // 检查是否已经登录
       if (loginResponse.url.includes('xsMain.jsp')) {
@@ -191,7 +235,12 @@ class JWXT {
 
       const captchaResponse = await fetch(proxyTo(`${captchaUrl}?${captchaParams}`), {
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       if (!captchaResponse.ok) {
         throw new Error(`验证码检查请求失败: ${captchaResponse.status}`);
@@ -230,7 +279,12 @@ class JWXT {
         },
         body: formData,
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       // 步骤6: 验证登录结果
       yield { type: "progress", message: "验证登录结果..." };
@@ -260,10 +314,20 @@ class JWXT {
   // 退出登录
   async logout() {
     // GET https://authserver.yku.edu.cn/authserver/logout?service=https%3A%2F%2Fjwgl.yku.edu.cn%2Fjsxsd
-    const logoutUrl = `${this.AUTH_URL}/authserver/logout?service=${encodeURIComponent(this.JWGL_URL)}`;
-    await fetch(proxyTo(logoutUrl), {
-      credentials: 'include'
-    });
+    try {
+      const logoutUrl = `${this.AUTH_URL}/authserver/logout?service=${encodeURIComponent(this.JWGL_URL)}`;
+      await fetch(proxyTo(logoutUrl), {
+        credentials: 'include'
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(()=>{});
+    } catch (error) {
+      console.error("退出登录过程中出错:", error);
+      // 不传播异常，因为此方法本身就是安全方法
+    }
   }
 
   // 获取成绩
@@ -279,7 +343,12 @@ class JWXT {
       const pyfaUrl = `${this.JWGL_URL}/jsxsd/pyfa/pyfa_query`;
       const pyfaResponse = await fetch(proxyTo(pyfaUrl), {
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
       const pyfaHtml = await pyfaResponse.text();
       const pyfaDoc = new DOMParser().parseFromString(pyfaHtml, 'text/html');
       const pyfaTable = pyfaDoc.getElementById('dataList');
@@ -302,7 +371,12 @@ class JWXT {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       const cjcxHtml = await cjcxResponse.text();
       const cjcxDoc = new DOMParser().parseFromString(cjcxHtml, 'text/html');
@@ -349,7 +423,12 @@ class JWXT {
         },
         body: formData,
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       const xsksapHtml = await xsksapResponse.text();
       const xsksapDoc = new DOMParser().parseFromString(xsksapHtml, 'text/html');
@@ -448,7 +527,12 @@ class JWXT {
         },
         body: formData,
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       if (!response.ok) {
         throw new Error(`请求失败: ${response.status}`);
@@ -704,7 +788,12 @@ class JWXT {
       const infoUrl = `${this.JWGL_URL}/jsxsd/framework/xsMain_new.jsp?t1=1`;
       const infoResponse = await fetch(proxyTo(infoUrl), {
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       if (!infoResponse.ok) {
         throw new Error(`获取个人信息失败: ${infoResponse.status}`);
@@ -746,7 +835,12 @@ class JWXT {
       const photoUrl = `${this.JWGL_URL}/jsxsd/grxx/xszpLoad`;
       const photoResponse = await fetch(proxyTo(photoUrl), {
         credentials: 'include'
-      });
+      }).then(response => {
+        if (response.status == 502) throw new Error(ERROR_MSGS[502]);
+        if (response.status == 429) throw new Error(ERROR_MSGS[429]);
+        if (!response.ok) throw new Error(`未知错误 (${response.status})`);
+        return response;
+      }).catch(rethrow);
 
       // 4. 转换为Base64编码
       if (photoResponse.ok) {
@@ -814,7 +908,7 @@ class DMUpdateModel {
           return false  // 是当前账号，未登录
         }
       } else {
-        await this.jwxt.logout();  // 登出旧的教务系统
+        if (this.jwxt._loggedIn) { await this.jwxt.logout() }  // 登出旧的教务系统
         this.jwxt = new JWXT(this.dm.user.id, this.dm.user.password);
         return false  // 不是当前账号，已经重置为当前账号，未登录
       }
@@ -877,10 +971,10 @@ class DMUpdateModel {
     await this.checkJwxt()
     try {
       await this.jwxt.login();
-    } catch (e) {
+    } catch (err) {
       await this.jwxt.logout();
       this.jwxt = null;
-      throw e;
+      throw err;
     }
   }
 
@@ -889,6 +983,7 @@ class DMUpdateModel {
     if (status !== null && !status) {
       await this.login()
     } else if (status === null) {
+      console.error("无法登录，没有登录用户，请通过DataModel.login登录")
       throw new Error("无法登录，没有登录用户，请通过DataModel.login登录")
     }
   }
@@ -908,10 +1003,15 @@ class DMUpdateModel {
     this.dm.user.lastUpdate = new Date().toISOString();
   }
 
-  async updateAll() {
+  async updateAll(includeSchedule = true) {
     await this.checkLogin()
+    const updateSchedule = async () => {
+      if (includeSchedule) {
+        await this.updateSchedule()
+      }
+    }
     await Promise.all([
-      this.updateSchedule(),
+      updateSchedule(),
       this.updateGrades(),
       this.updateProfile()
     ]);
@@ -951,10 +1051,12 @@ class DataModel {
     if (rawData) {
       try {
         const data = JSON.parse(rawData);
-        this.currentLoginUser = data.currentLoginUser;
-        this.allLoginUsers = data.allLoginUsers;
-        this.user = this.allLoginUsers[this.currentLoginUser];
-        this.server = data?.server;
+        this.currentLoginUser = data.currentLoginUser || null;
+        this.allLoginUsers = data.allLoginUsers || {};
+        if (this.currentLoginUser) {
+          this.user = this.allLoginUsers[this.currentLoginUser];
+        }
+        this.server = data?.server || {};
       } catch (error) {
         console.error('解析本地存储数据失败:', error);
         localStorage.setItem('rawdata', DEFAULT_RAWDATA);
@@ -969,17 +1071,17 @@ class DataModel {
   // *不会保存上一个用户的已修改内容。
   // 仅数据~.
   async changeToLogin(username, update = false) {
-    if (!(username in allLoginUsers)) {
+    if (!(username in this.allLoginUsers)) {
       throw new Error("未登录的用户")
     }
+    await this.logout(false)
     this.currentLoginUser = username;
     this.user = this.allLoginUsers[this.currentLoginUser]
-    await this.logout(false)
     if (update) {
-      await this.logout(false)
       await this.login(this.user.id, this.user.password)
       await this.updateAll()
     }
+    this.saveAllToLocal()
     return true;
   }
 
@@ -1009,7 +1111,7 @@ class DataModel {
 
     // 登录成功，更新后立刻锁定并保存到本地
     if (update) {
-      await this.updateAll()
+      await this.updateAll(true)
     }
     this.mergeCurrent()
     this.saveAllToLocal()
@@ -1030,8 +1132,8 @@ class DataModel {
 
   // 更新当前登录用户的数据
   // 仅会话->数据会话
-  async updateAll() {
-    await this.updater.updateAll();
+  async updateAll(updateSchedule = true) {
+    await this.updater.updateAll(updateSchedule);
   }
 
   // 数据本地持久化

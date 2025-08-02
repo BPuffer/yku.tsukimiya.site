@@ -75,8 +75,6 @@
         </div>
       </div>
     </div>
-
-    <div class="sentinel"></div>
   </div>
 </template>
 
@@ -189,6 +187,7 @@ onUnmounted(() => {
   text-align: center;
   padding: 40px 20px;
   color: #888;
+  background-color: #fff7f7c0;
 }
 
 .empty-state i {
@@ -332,11 +331,6 @@ onUnmounted(() => {
 
 .arrange-card.completed .exam-time {
   color: #9E9E9E;
-}
-
-
-.sentinel {
-  height: 136px;
 }
 
 </style>

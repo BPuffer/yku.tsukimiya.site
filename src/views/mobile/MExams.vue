@@ -105,19 +105,8 @@ onMounted(() => {
 
 <style scoped>
 .view-container {
-  max-height: 100vh;
-  margin: 0 auto;
-  padding: 15px;
-}
-@media (max-width: 375px) {
-  .view-container {
-    padding: 10px;
-  }
-}
-@media (max-width: 320px) {
-  .view-container {
-    padding: 5px;
-  }
+  margin: 0;
+  padding: 0;
 }
 
 /* #region 为空样式 */

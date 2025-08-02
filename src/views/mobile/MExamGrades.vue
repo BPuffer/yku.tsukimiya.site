@@ -81,7 +81,6 @@
         <p>没有找到匹配的课程成绩信息</p>
       </div>
     </div>
-    <div class="sentinel"></div>
   
     <div 
       @click="closeFilterTipWindow" 
@@ -506,13 +505,14 @@ const getScoreClass = (score) => {
 .no-data {
   text-align: center;
   padding: 50px 20px;
-  color: #9e9e9e;
+  color: #888;
+  background-color: #fff7f7c0;
 }
 
 .no-data i {
   font-size: 48px;
   margin-bottom: 15px;
-  color: #e0e0e0;
+  color: #888;
 }
 
 .no-data p {
@@ -654,9 +654,5 @@ const getScoreClass = (score) => {
 } */
 
 /* #endregion */
-
-.sentinel {
-  height: 136px;
-}
 
 </style>

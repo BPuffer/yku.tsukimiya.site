@@ -1,5 +1,9 @@
 <template>
   <div class="profile-container">
+    <!-- :style="{
+      justifyContent: noUsers ? 'flex-end' : 'flex-start'
+    }" -->
+  
     <div class="user-grid">
       <!-- 用户卡片 -->
       <div v-for="(user, id) in dataModel.allLoginUsers" :key="id" 
@@ -25,12 +29,12 @@
         <div class="user-card-actions">
           <button class="user-card-action-login"
             v-if="dataModel.currentLoginUser !== id"
-            @click="loginUser(id)" 
+            @click="loadUser(id)" 
             :disabled="dataModel.currentLoginUser === id"
             :class="{ disabled: dataModel.currentLoginUser === id }"
           >
             <i class="fas fa-sign-in-alt"></i>
-            登录
+            加载
           </button>
           
           <button class="user-card-action-refresh"
@@ -55,13 +59,14 @@
       
       <!-- 添加账号卡片 -->
       <div class="user-card add-card" @click="showAddForm = true">
+        <div class="no-account" v-if="noUsers">
+          <p>暂无账号 前往添加</p>
+          <p>↓  ↓  ↓</p>
+        </div>
         <div class="add-icon">
           <i class="fas fa-plus"></i>
         </div>
       </div>
-
-      <!-- 哨兵 -->
-      <div class="sentinel"></div>
     </div>
 
     <!-- 添加账号表单 -->
@@ -101,22 +106,51 @@
         >
           <span v-if="loginInProgress" class="spinner"></span>
           <!-- 直接在按钮上显示状态 -->
-          {{ loginInProgress ? (loginInProgressMessage || '登录中...') : (loginError ? '登录失败' : '登录') }}
+          {{ loginInProgress ? (loginInProgressMessage || '登录中...') : '登录' }}
         </button>
         <div v-if="loginError" class="error-message">
           {{ loginError }}
         </div>
       </div>
     </div>
+
+    <!-- 状态窗口 -->
+    <div v-if="onShowInfo" class="showinfo-overlay">
+      <div class="showinfo-window">
+        <div v-if="showInfoCanbeClose" class="info-close-btn" @click="hideInfo">
+          <i class="fas fa-times"></i>
+        </div>
+        <div v-if="showInfoType == 'loading'" class="loading-icon info-icon">
+          <i class="fas fa-spinner"></i>
+        </div>
+        <div v-else-if="showInfoType == 'error'" class="error-icon info-icon">
+          <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div v-else-if="showInfoType == 'success'" class="success-icon info-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div v-else class="info-icon">
+          <i class="fas fa-info-circle"></i>
+        </div>
+        <p class="info-tip">{{ infoMessage }}</p>
+      </div>
+    </div>
+    <!--
+    <button @click="showInfo('error', '测试信息')">测试错误窗口</button>
+    <button @click="showInfo('loading', '加载中……', true)">测试加载窗口</button>
+    -->
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import DataModel from '@/models/DataModel'
 
 // 创建响应式数据模型实例
 const dataModel = reactive(DataModel)
+const noUsers = computed(() => {
+  return Object.keys(dataModel.allLoginUsers).length === 0;
+})
 
 // 添加账号相关状态
 const showAddForm = ref(false)
@@ -124,36 +158,77 @@ const newUsername = ref('')
 const newPassword = ref('')
 const loginInProgress = ref(false)
 
-// 登录用户
-async function loginUser(id) {
+// 信息小窗口
+const onShowInfo = ref(false)
+const showInfoType = ref('')
+const infoMessage = ref('')
+const showInfoCanbeClose = ref(true)
+
+// 信息窗口操作
+function showInfo(type, tip, canBeClose=null) {
+  // 加载信息不可关闭
+  showInfoCanbeClose.value = canBeClose == null ? type != 'loading' : canBeClose;
+  onShowInfo.value = true
+  showInfoType.value = type
+  infoMessage.value = tip
+}
+
+function hideInfo() {
+  onShowInfo.value = false
+  showInfoType.value = ''
+  infoMessage.value = ''
+}
+
+// **切换**加载用户
+async function loadUser(id) {
+  showInfo('loading', '加载中...')
   try {
     // 登出当前用户（如果存在）
     if (dataModel.currentLoginUser) {
       await dataModel.logout(true)
     }
     
-    // 获取用户信息并登录
-    const user = dataModel.allLoginUsers[id]
-    await dataModel.login(id, user.password)
+    // 获取用户信息并**切换**加载
+    if (id in dataModel.allLoginUsers) {
+      // 切换加载不刷新教务系统状态
+      console.log("loginUser > changeToLogin")
+      await dataModel.changeToLogin(id, false)
+      console.log(dataModel.currentLoginUser)
+    } else {
+      console.error('不预期的错误：用户实际上不存在于本地，请新建对话框')
+      showInfo('error', '不预期的错误：用户实际上不存在于本地，请新建对话框')
+      return
+    }
+    showInfo('success', '加载成功')
     
-    // 更新数据模型
-    dataModel.mergeCurrent()
-    dataModel.saveAllToLocal()
   } catch (error) {
-    console.error('登录失败:', error.message)
+    console.error('加载失败:', error)
+    showInfo('error', `加载失败: ${error.message}\n当前加载用户: ${dataModel.currentLoginUser || '未登录'}`)
+  } finally {
+    // setTimeout(() => {
+    //   hideInfo()
+    // }, 1000)
   }
+  console.log(dataModel.currentLoginUser)
 }
 
 // 刷新当前用户数据
 async function refreshUser() {
   if (!dataModel.currentLoginUser) return
   
+  showInfo('loading', '刷新数据中...')
   try {
-    await dataModel.updateAll()
+    await dataModel.updateAll(false)
     dataModel.mergeCurrent()
     dataModel.saveAllToLocal()
+    showInfo('success', '刷新成功')
   } catch (error) {
-    console.error('刷新失败:', error.message)
+    console.error('刷新失败:', error)
+    showInfo('error', `刷新失败: ${error.message}`)
+  } finally {
+    // setTimeout(() => {
+    //   hideInfo()
+    // }, 1000)
   }
 }
 
@@ -168,7 +243,7 @@ async function deleteUser(id) {
       dataModel.saveAllToLocal()
     }
   } catch (error) {
-    console.error('删除失败:', error.message)
+    console.error('删除失败:', error)
   }
 }
 
@@ -177,6 +252,15 @@ const loginError = ref('')
 const loginInProgressMessage = ref('')
 
 async function startLogin() {
+  if (!newUsername.value) {
+    loginError.value = "请输入学号"
+    return
+  }
+  if (!newPassword.value) {
+    loginError.value = "请输入密码"
+    return
+  }
+
   loginInProgress.value = true
   loginError.value = ''
 
@@ -392,9 +476,19 @@ function resetFormState() {
   color: #888;
 }
 
-.sentinel {
-  height: 64px;
-  width: 100%;
+.no-account {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 20px;
+  background-color: #fff7f7c0;
+  border-radius: 32px;
+  border: 2px #222 solid;
+  margin: 20px 0 0;
+}
+
+.no-account p {
+  margin: 0;
 }
 /* #endregion */
 
@@ -509,4 +603,84 @@ function resetFormState() {
 
 /* #endregion */
 
+/* #region 等待窗口 */
+.showinfo-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+}
+
+.showinfo-window {
+  position: relative;
+  width: 60%;
+  max-width: 400px;
+  padding: 2.5rem 1.5rem;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  transform: translateY(0);
+  animation: fadeIn 0.1s ease-out;
+}
+
+/* .info-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+*/
+.info-icon i{
+  font-size: 36px;
+} 
+
+.loading-icon {
+  animation: spin 1s linear infinite;
+}
+
+.info-tip {
+  margin: 0;
+  color: #2f6dff;
+  font-size: 20px;
+}
+
+.info-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* #endregion */
 </style>
